@@ -34,8 +34,30 @@ class BAC_Api {
 	 * @param string $api_key  API key.
 	 */
 	public function __construct( $base_url, $api_key ) {
-		$this->base_url = untrailingslashit( trim( (string) $base_url ) );
+		$this->base_url = self::normalize_base_url( $base_url );
 		$this->api_key  = trim( (string) $api_key );
+	}
+
+	/**
+	 * Normalise whatever the user pasted into a base URL ending in /api/3.
+	 *
+	 * Accepts the bare account URL ("https://acct.api-us1.com"), one that
+	 * already includes the path, and stray trailing slashes.
+	 *
+	 * @param string $base_url Raw URL from settings.
+	 * @return string
+	 */
+	public static function normalize_base_url( $base_url ) {
+		$url = untrailingslashit( trim( (string) $base_url ) );
+
+		if ( '' === $url ) {
+			return '';
+		}
+
+		// Strip any existing /api or /api/3 (with or without trailing slash), then re-add.
+		$url = preg_replace( '#/api(/3)?/?$#i', '', $url );
+
+		return untrailingslashit( $url ) . '/api/3';
 	}
 
 	/**

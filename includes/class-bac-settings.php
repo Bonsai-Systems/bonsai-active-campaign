@@ -114,8 +114,9 @@ class BAC_Settings {
 		$clean   = array();
 
 		$url = isset( $input['api_url'] ) ? esc_url_raw( trim( $input['api_url'] ) ) : '';
-		// Trim a trailing /api/3 duplication or slash but otherwise keep as given.
-		$clean['api_url'] = untrailingslashit( $url );
+		// Normalise to the "<account>.api-us1.com/api/3" form the API client needs,
+		// whether the client pasted the bare account URL or included the path.
+		$clean['api_url'] = $url ? BAC_Api::normalize_base_url( $url ) : '';
 
 		$key = isset( $input['api_key'] ) ? trim( wp_unslash( $input['api_key'] ) ) : '';
 		if ( '' === $key && ! empty( $current['api_key'] ) ) {
