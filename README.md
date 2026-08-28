@@ -201,18 +201,25 @@ Contributions welcome; delete an item when it ships and add a CHANGELOG entry.
 
 ### Forms / front-end
 
-- **Honeypot + time-trap spam protection** on the AJAX submit (no external
-  service, no CAPTCHA).
+Native rendering means AC's own JS widget never loads, so anything it used to do
+for the form is now ours to reproduce:
+
+- **Honour all of the form's configured actions.** The submit handler currently
+  does `contact/sync` + a single `contactLists` subscribe. AC forms can also
+  define tags, multiple lists, custom-field writes and deal actions in their
+  `action_data` — parse and apply those.
+- **Honour the form's redirect action.** If the AC form is set to redirect on
+  submit rather than show a thank-you message, follow that instead of the
+  inline swap. Fall back to inline when none is set.
+- **Honeypot + time-trap spam protection** on the AJAX submit. AC's widget has
+  its own spam/reCAPTCHA handling; native submit has none. No external service,
+  no CAPTCHA.
 - **Cookiebot / consent awareness** — optionally hold submission until consent,
   in line with the Bonsai tracking rules.
 - **Client-side validation messages** styled to match the module, instead of
-  relying on the browser default bubble.
-- **Success/redirect option** — redirect to a thank-you page instead of the
-  inline swap, set per render call or per form.
+  the browser default bubble.
 - **`bac_form_submitted` → analytics** — documented recipe for pushing a
-  GTM `dataLayer` event on success (consent-gated).
-- **Multi-list / tag support** — let a render call add tags or subscribe to
-  more than one list.
+  consent-gated GTM `dataLayer` event on success.
 
 ### Housekeeping
 
