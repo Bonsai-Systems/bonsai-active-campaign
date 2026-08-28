@@ -58,5 +58,3 @@ error message and loading state.
 - The API key is stored in the `bac_settings` option. The settings page is
   restricted to `manage_options`.
 - Uninstalling the plugin drops the table and deletes all options.
-- `ORIGINALactivecampaign/` (if present) is the original standalone PHP the
-  plugin replaces — kept locally for reference, git-ignored, never shipped.
