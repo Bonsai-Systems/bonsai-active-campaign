@@ -1,0 +1,31 @@
+/**
+ * Bonsai ActiveCampaign — minimal, theme-agnostic form styling.
+ *
+ * The NEC SWS theme styles these forms fully via its own module CSS
+ * (.active-campaign-module__* classes). This file only covers the states the
+ * plugin adds (error message, loading button) so the form is usable on any
+ * theme that doesn't provide its own styling.
+ */
+.bac-form__error {
+	margin: 0 0 1rem;
+	padding: 0.75rem 1rem;
+	border-radius: 4px;
+	background: #fde8e8;
+	color: #9b1c1c;
+	border: 1px solid #f5bcbc;
+}
+
+.bac-form__thanks {
+	margin: 0;
+}
+
+.bac-form__submit.is-loading {
+	opacity: 0.6;
+	cursor: progress;
+}
+
+/* Fallback field layout — only applies where the theme hasn't styled them. */
+.bac-form__form .active-campaign-module__input:not([type="hidden"]) {
+	display: block;
+	width: 100%;
+}
