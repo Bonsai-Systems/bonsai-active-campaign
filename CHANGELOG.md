@@ -12,6 +12,14 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `main` branch and updates from release assets — same setup as Bonsai Code
   Injector.
 
+### Changed
+- `BAC_Api` now normalises the API URL, so the connection works whether the
+  bare account URL (`https://acct.api-us1.com`) or the full `/api/3` URL is
+  entered in settings.
+- README: added an "Using it in an ACF module" section (field group, Flexible
+  Content module template, `function_exists` / form-ID guards, optional
+  `acf/load_field` form picker).
+
 ## [1.0.0] - 2026-08-28
 
 ### Added
