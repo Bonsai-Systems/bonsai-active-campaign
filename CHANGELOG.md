@@ -19,6 +19,9 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - README: added an "Using it in an ACF module" section (field group, Flexible
   Content module template, `function_exists` / form-ID guards, optional
   `acf/load_field` form picker).
+- README: added a "Roadmap / ideas" section (form picker/block/shortcode,
+  per-form resync, webhook sync, spam protection, consent gating, i18n,
+  test coverage).
 
 ## [1.0.0] - 2026-08-28
 

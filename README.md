@@ -166,3 +166,58 @@ error message and loading state.
 - The API key is stored in the `bac_settings` option. The settings page is
   restricted to `manage_options`.
 - Uninstalling the plugin drops the table and deletes all options.
+
+## Roadmap / ideas
+
+Not built yet — a running list of improvements, roughly in priority order.
+Contributions welcome; delete an item when it ships and add a CHANGELOG entry.
+
+### Editor experience
+
+- **Ship a form picker instead of a raw ID field.** Right now a theme has to
+  wire up its own `acf/load_field` filter (see *Using it in an ACF module*).
+  Options, cheapest first:
+  - A helper `bac_acf_form_choices()` returning `array( id => 'Name (#id)' )`
+    so a theme's filter is a one-liner.
+  - A drop-in filter the plugin registers itself for a conventional field name
+    (e.g. any ACF field named `ac_form_id` or `bac_form_id` becomes a select),
+    toggleable from settings.
+  - A proper custom ACF field type (`activecampaign_form`) — nicest UX, most
+    work, needs ACF Pro present.
+- **Gutenberg block + shortcode** (`[bac_form id="12"]`) so non-Bonsai sites and
+  the block editor can drop a form in without theme code.
+- **Preview in the admin** — render a synced form on its row in
+  *Settings > ActiveCampaign* so editors can see what they're picking.
+
+### Sync / reliability
+
+- **Manual "resync single form"** action on each row, rather than all-or-nothing.
+- **Admin notice when a sync fails** N times in a row (currently only in the log
+  under `WP_DEBUG`).
+- **Webhook endpoint** so ActiveCampaign pushes form changes instantly instead
+  of waiting up to 15 minutes for cron.
+- **Store the raw API payload** alongside the parsed form, to make debugging
+  field-mapping issues possible without a re-fetch.
+
+### Forms / front-end
+
+- **Honeypot + time-trap spam protection** on the AJAX submit (no external
+  service, no CAPTCHA).
+- **Cookiebot / consent awareness** — optionally hold submission until consent,
+  in line with the Bonsai tracking rules.
+- **Client-side validation messages** styled to match the module, instead of
+  relying on the browser default bubble.
+- **Success/redirect option** — redirect to a thank-you page instead of the
+  inline swap, set per render call or per form.
+- **`bac_form_submitted` → analytics** — documented recipe for pushing a
+  GTM `dataLayer` event on success (consent-gated).
+- **Multi-list / tag support** — let a render call add tags or subscribe to
+  more than one list.
+
+### Housekeeping
+
+- `languages/` + a `.pot` file (the text domain is already loaded).
+- PHPUnit coverage for `BAC_Api` (URL normalisation, error extraction) and the
+  list-ID resolver in `bac_get_form_list_id()` — it has several fallback
+  branches and no tests.
+- Settings link straight to the ActiveCampaign API Access page.
