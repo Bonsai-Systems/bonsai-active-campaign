@@ -19,4 +19,4 @@ if (PHP_VERSION_ID < 50600) {
 
 require_once __DIR__ . '/composer/autoload_real.php';
 
-return ComposerAutoloaderInit057850a63dccc1b5ea3cf2a346d50db8::getLoader();
+return ComposerAutoloaderInitBonsaiActiveCampaign::getLoader();

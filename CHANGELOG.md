@@ -4,7 +4,12 @@ All notable changes to this project are documented here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project adheres
 to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] - 2026-08-28
+## [Unreleased]
+
+## [1.0.1] - 2026-09-24
+
+### Fixed
+- [composer.json, vendor/] Fatal error (`Cannot declare class ComposerAutoloaderInit057850a63dccc1b5ea3cf2a346d50db8, because the name is already in use`) when active alongside Bonsai Code Injector. `vendor/` had been copied from that plugin, and Composer reuses the suffix already in `vendor/autoload.php`, so both shipped the same autoloader class. Set a fixed `config.autoloader-suffix` (`BonsaiActiveCampaign`) and regenerated the autoloader: class is now `ComposerAutoloaderInitBonsaiActiveCampaign`.
 
 ### Added
 - GitHub-based automatic updates via the Yahnis Elsts Plugin Update Checker

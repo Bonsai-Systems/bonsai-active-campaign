@@ -1,19 +1,19 @@
 <?php return array(
     'root' => array(
-        'name' => 'bonsai-digital-collective/bonsai-code-injector',
+        'name' => 'bonsai-digital-collective/bonsai-active-campaign',
         'pretty_version' => 'dev-main',
         'version' => 'dev-main',
-        'reference' => 'd76db7a7f2c8a7c617788796e6d2a69b578dc9cb',
+        'reference' => '09e030333721d4088d471557ef7f9e21221378e2',
         'type' => 'library',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
-        'dev' => false,
+        'dev' => true,
     ),
     'versions' => array(
-        'bonsai-digital-collective/bonsai-code-injector' => array(
+        'bonsai-digital-collective/bonsai-active-campaign' => array(
             'pretty_version' => 'dev-main',
             'version' => 'dev-main',
-            'reference' => 'd76db7a7f2c8a7c617788796e6d2a69b578dc9cb',
+            'reference' => '09e030333721d4088d471557ef7f9e21221378e2',
             'type' => 'library',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),

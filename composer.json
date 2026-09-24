@@ -1,5 +1,8 @@
 {
     "name": "bonsai-digital-collective/bonsai-active-campaign",
+    "config": {
+        "autoloader-suffix": "BonsaiActiveCampaign"
+    },
     "require": {
         "yahnis-elsts/plugin-update-checker": "^5.6"
     }

@@ -3,7 +3,7 @@
  * Plugin Name:       Bonsai ActiveCampaign
  * Plugin URI:        https://bonsaidigitalcollective.com/
  * Description:       Connects a WordPress site to an ActiveCampaign account: syncs ActiveCampaign form definitions into a local table and renders/submits those forms natively (no ActiveCampaign JS widget, no iframe). Provides bac_get_form(), bac_get_forms() and bac_render_form() for themes.
- * Version:           1.0.0
+ * Version:           1.0.1
  * Requires at least: 6.0
  * Requires PHP:      7.4
  * Author:            The Bonsai Digital Collective
@@ -38,7 +38,7 @@ $bac_update_checker = PucFactory::buildUpdateChecker(
 $bac_update_checker->setBranch( 'main' );
 $bac_update_checker->getVcsApi()->enableReleaseAssets();
 
-define( 'BAC_VERSION', '1.0.0' );
+define( 'BAC_VERSION', '1.0.1' );
 define( 'BAC_FILE', __FILE__ );
 define( 'BAC_DIR', plugin_dir_path( __FILE__ ) );
 define( 'BAC_URL', plugin_dir_url( __FILE__ ) );
