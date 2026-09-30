@@ -1,0 +1,534 @@
+/**
+ * Bonsai admin UI – shared design system for Bonsai plugin admin screens.
+ *
+ * Version: 1.0.0
+ *
+ * Canonical copy lives in bonsai-seo-geo-checker/assets/bonsai-admin-ui.css.
+ * Every Bonsai plugin ships its own identical copy (no cross-plugin
+ * dependency) and only enqueues it on its own screens, so identical class
+ * names never collide. Change the canonical file first, bump the version
+ * above, then copy it into the other plugins.
+ *
+ * Everything is scoped under .bonsai-ui (the page wrapper) so nothing leaks
+ * into the rest of wp-admin.
+ *
+ * Components:
+ *   .bonsai-ui                 Page wrapper (add to .wrap). --narrow for single-column settings.
+ *   .bonsai-ui-header          Logo, title, lead, links; version on the right.
+ *   .bonsai-ui-card            White panel. __head, __title, __intro, __footer.
+ *   .bonsai-ui-toggle          Switch-style checkbox (input[type=checkbox]).
+ *   .bonsai-ui-badge           Status pill. --success, --warning, --error, --neutral.
+ *   .bonsai-ui-status          Key/value list for diagnostics (dl).
+ *   .bonsai-ui-actions         Row of buttons.
+ *   .bonsai-ui-help            Footer/help area.
+ */
+
+/* Tokens --------------------------------------------------------------- */
+
+.bonsai-ui {
+	--bonsai-ui-accent: #ee4367;
+	--bonsai-ui-accent-strong: #c21f48; /* Hover fill: white text on #ee4367 fails AA, this passes (5.8:1). */
+	--bonsai-ui-ink: #000;
+	--bonsai-ui-text: #1d2327;
+	--bonsai-ui-muted: #50575e;
+	--bonsai-ui-line: #d8dcdf;
+	--bonsai-ui-line-soft: #f0f0f1;
+	--bonsai-ui-surface: #fff;
+	--bonsai-ui-subtle: #f6f7f7;
+	--bonsai-ui-header-bg: #f9f8f4; /* Matches the logo JPG's off-white background. */
+	--bonsai-ui-success: #13744a;
+	--bonsai-ui-success-bg: #e7f4ed;
+	--bonsai-ui-warning: #8a4b00;
+	--bonsai-ui-warning-bg: #fdf1e1;
+	--bonsai-ui-error: #b0122c;
+	--bonsai-ui-error-bg: #fdeaed;
+	--bonsai-ui-radius: 10px;
+	--bonsai-ui-radius-sm: 6px;
+
+	max-width: 1100px;
+	padding-top: 8px;
+	color: var(--bonsai-ui-text);
+}
+
+.bonsai-ui--narrow {
+	max-width: 900px;
+}
+
+.bonsai-ui * {
+	box-sizing: border-box;
+}
+
+/* Header --------------------------------------------------------------- */
+
+.bonsai-ui-header {
+	display: flex;
+	justify-content: space-between;
+	gap: 24px;
+	align-items: flex-start;
+	margin: 16px 0 24px;
+	padding: 26px 28px;
+	background: var(--bonsai-ui-header-bg);
+	border: 1px solid #e4e1d8;
+	border-left: 4px solid var(--bonsai-ui-accent);
+	border-radius: var(--bonsai-ui-radius);
+}
+
+.bonsai-ui-header__main {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-start;
+	min-width: 0;
+}
+
+.bonsai-ui-header__logo {
+	display: block;
+	width: 250px;
+	max-width: 100%;
+	height: auto;
+	margin-bottom: 16px;
+}
+
+/* Beats core's .wrap h1 sizing. */
+.bonsai-ui .bonsai-ui-header__title {
+	margin: 0 0 8px;
+	padding: 0;
+	font-size: 30px;
+	font-weight: 650;
+	line-height: 1.2;
+	letter-spacing: -1px;
+	color: var(--bonsai-ui-ink);
+}
+
+.bonsai-ui-header__lead {
+	max-width: 65ch;
+	margin: 0 0 8px;
+	font-size: 14px;
+	line-height: 1.6;
+	color: var(--bonsai-ui-muted);
+}
+
+.bonsai-ui-header__links {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px 18px;
+	margin: 8px 0 0;
+	padding: 0;
+	list-style: none;
+	font-size: 13px;
+}
+
+.bonsai-ui-header__links li {
+	margin: 0;
+}
+
+/* Pink on the off-white header fails AA contrast, so links stay black and
+ * hover/focus thickens the underline instead. */
+.bonsai-ui-header a {
+	font-weight: 600;
+	color: var(--bonsai-ui-ink);
+	text-decoration-color: var(--bonsai-ui-accent);
+	text-underline-offset: 3px;
+}
+
+.bonsai-ui-header a:hover,
+.bonsai-ui-header a:focus {
+	color: var(--bonsai-ui-ink);
+	text-decoration-thickness: 2px;
+}
+
+.bonsai-ui-header__meta {
+	display: flex;
+	flex: 0 0 auto;
+	flex-direction: column;
+	gap: 8px;
+	align-items: flex-end;
+}
+
+.bonsai-ui-version {
+	padding: 7px 10px;
+	font: 12px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+	white-space: nowrap;
+	color: var(--bonsai-ui-text);
+	border: 1px solid #ccd1d5;
+	border-radius: var(--bonsai-ui-radius-sm);
+}
+
+/* Notices -------------------------------------------------------------- */
+
+.bonsai-ui .notice,
+.bonsai-ui div.updated,
+.bonsai-ui div.error {
+	margin: 0 0 20px;
+	border-radius: var(--bonsai-ui-radius-sm);
+}
+
+/* Cards ---------------------------------------------------------------- */
+
+.bonsai-ui-card {
+	margin: 0 0 24px;
+	padding: 26px 28px;
+	background: var(--bonsai-ui-surface);
+	border: 1px solid var(--bonsai-ui-line);
+	border-radius: var(--bonsai-ui-radius);
+}
+
+.bonsai-ui-card__head {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 12px 20px;
+	align-items: baseline;
+	justify-content: space-between;
+	margin: 0 0 8px;
+}
+
+.bonsai-ui .bonsai-ui-card__title,
+.bonsai-ui .bonsai-ui-card > h2 { /* Settings API section titles, printed as bare <h2>. */
+	margin: 0 0 8px;
+	padding: 0;
+	font-size: 19px;
+	line-height: 1.3;
+	letter-spacing: -0.3px;
+	color: var(--bonsai-ui-ink);
+}
+
+/* Several Settings API sections in one card: divide them. */
+.bonsai-ui .bonsai-ui-card > h2:not(:first-child) {
+	margin-top: 24px;
+	padding-top: 20px;
+	border-top: 1px solid var(--bonsai-ui-line-soft);
+}
+
+.bonsai-ui-card__head .bonsai-ui-card__title {
+	margin: 0;
+}
+
+.bonsai-ui-card__intro,
+.bonsai-ui-card > h2 + p { /* Settings API section descriptions. */
+	max-width: 70ch;
+	margin: 0 0 8px;
+	font-size: 14px;
+	line-height: 1.6;
+	color: var(--bonsai-ui-muted);
+}
+
+.bonsai-ui-card__footer {
+	margin: 20px -28px -26px;
+	padding: 16px 28px;
+	background: var(--bonsai-ui-subtle);
+	border-top: 1px solid var(--bonsai-ui-line-soft);
+	border-radius: 0 0 var(--bonsai-ui-radius) var(--bonsai-ui-radius);
+}
+
+/* Tables for settings (core .form-table) inside cards. */
+.bonsai-ui-card .form-table {
+	margin-top: 8px;
+}
+
+.bonsai-ui-card .form-table tr {
+	border-bottom: 1px solid var(--bonsai-ui-line-soft);
+}
+
+.bonsai-ui-card .form-table tr:last-of-type {
+	border-bottom: 0;
+}
+
+.bonsai-ui-card .form-table th {
+	padding: 14px 10px 14px 0;
+	font-weight: 500;
+	color: var(--bonsai-ui-text);
+}
+
+.bonsai-ui-card .form-table td {
+	padding: 10px;
+}
+
+/* Data tables (core .widefat). */
+.bonsai-ui .widefat {
+	border-color: var(--bonsai-ui-line);
+	border-radius: var(--bonsai-ui-radius-sm);
+	overflow: hidden;
+}
+
+.bonsai-ui .widefat thead th,
+.bonsai-ui .widefat thead td {
+	font-weight: 600;
+	color: var(--bonsai-ui-muted);
+	background: var(--bonsai-ui-subtle);
+}
+
+/* Form controls -------------------------------------------------------- */
+
+.bonsai-ui input[type="text"],
+.bonsai-ui input[type="password"],
+.bonsai-ui input[type="url"],
+.bonsai-ui input[type="email"],
+.bonsai-ui input[type="number"],
+.bonsai-ui input[type="search"],
+.bonsai-ui input[type="tel"],
+.bonsai-ui input[type="date"],
+.bonsai-ui input[type="datetime-local"],
+.bonsai-ui input[type="time"],
+.bonsai-ui select,
+.bonsai-ui textarea {
+	border-color: #8c8f94;
+	border-radius: var(--bonsai-ui-radius-sm);
+}
+
+.bonsai-ui textarea.code,
+.bonsai-ui textarea.bonsai-ui-code {
+	font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+	font-size: 13px;
+}
+
+.bonsai-ui input:focus,
+.bonsai-ui select:focus,
+.bonsai-ui textarea:focus {
+	border-color: var(--bonsai-ui-ink);
+	outline: 2px solid transparent; /* Keeps a visible focus ring in forced-colours mode. */
+	box-shadow: 0 0 0 1px var(--bonsai-ui-ink);
+}
+
+.bonsai-ui input[type="checkbox"]:checked,
+.bonsai-ui input[type="radio"]:checked {
+	border-color: var(--bonsai-ui-ink);
+}
+
+.bonsai-ui input[type="radio"]:checked::before {
+	background-color: var(--bonsai-ui-ink);
+}
+
+/* Stack radio/checkbox groups one per line. */
+.bonsai-ui fieldset label {
+	display: block;
+	margin: 0 0 6px;
+}
+
+.bonsai-ui .description {
+	color: var(--bonsai-ui-muted);
+}
+
+.bonsai-ui code {
+	padding: 2px 5px;
+	font-size: 12px;
+	background: var(--bonsai-ui-subtle);
+	border-radius: 4px;
+}
+
+/* Switch-style checkbox. Opt in with class="bonsai-ui-toggle" on a checkbox
+ * that already has a proper <label>. */
+.bonsai-ui input[type="checkbox"].bonsai-ui-toggle {
+	position: relative;
+	width: 38px;
+	height: 22px;
+	margin: 0 8px 0 0;
+	vertical-align: middle;
+	background: #c3c4c7;
+	border: 0;
+	border-radius: 999px;
+	box-shadow: none;
+	transition: background-color 0.15s ease;
+	-webkit-appearance: none;
+	appearance: none;
+	cursor: pointer;
+}
+
+.bonsai-ui input[type="checkbox"].bonsai-ui-toggle::before {
+	position: absolute;
+	top: 3px;
+	left: 3px;
+	width: 16px;
+	height: 16px;
+	margin: 0;
+	background: #fff;
+	border-radius: 50%;
+	content: "";
+	transition: transform 0.15s ease;
+}
+
+.bonsai-ui input[type="checkbox"].bonsai-ui-toggle:checked {
+	background: var(--bonsai-ui-ink);
+}
+
+.bonsai-ui input[type="checkbox"].bonsai-ui-toggle:checked::before {
+	transform: translateX(16px);
+}
+
+.bonsai-ui input[type="checkbox"].bonsai-ui-toggle:focus-visible {
+	outline: 2px solid var(--bonsai-ui-accent);
+	outline-offset: 2px;
+	box-shadow: none;
+}
+
+.bonsai-ui input[type="checkbox"].bonsai-ui-toggle:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.bonsai-ui input[type="checkbox"].bonsai-ui-toggle,
+	.bonsai-ui input[type="checkbox"].bonsai-ui-toggle::before {
+		transition: none;
+	}
+}
+
+/* Buttons -------------------------------------------------------------- */
+
+.bonsai-ui .button {
+	border-radius: var(--bonsai-ui-radius-sm);
+}
+
+.bonsai-ui .button-primary {
+	color: #fff;
+	background: var(--bonsai-ui-ink);
+	border-color: var(--bonsai-ui-ink);
+}
+
+.bonsai-ui .button-primary:hover,
+.bonsai-ui .button-primary:focus {
+	color: #fff;
+	background: var(--bonsai-ui-accent-strong);
+	border-color: var(--bonsai-ui-accent-strong);
+}
+
+.bonsai-ui .button-primary:focus {
+	box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--bonsai-ui-ink);
+}
+
+.bonsai-ui .button-primary:disabled,
+.bonsai-ui .button-primary.disabled {
+	color: #a7aaad !important; /* Core disabled styles use !important. */
+	background: #f6f7f7 !important;
+	border-color: #dcdcde !important;
+}
+
+.bonsai-ui .button-secondary,
+.bonsai-ui .button:not(.button-primary):not(.button-link) {
+	color: var(--bonsai-ui-ink);
+	border-color: var(--bonsai-ui-ink);
+}
+
+.bonsai-ui .button-secondary:hover,
+.bonsai-ui .button:not(.button-primary):not(.button-link):hover {
+	color: var(--bonsai-ui-ink);
+	background: var(--bonsai-ui-subtle);
+	border-color: var(--bonsai-ui-ink);
+}
+
+.bonsai-ui .button:not(.button-primary):focus {
+	color: var(--bonsai-ui-ink);
+	border-color: var(--bonsai-ui-ink);
+	box-shadow: 0 0 0 1px var(--bonsai-ui-ink);
+}
+
+.bonsai-ui .submit {
+	margin: 0 0 24px;
+	padding: 0;
+}
+
+.bonsai-ui-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	align-items: center;
+}
+
+/* Badges --------------------------------------------------------------- */
+
+.bonsai-ui-badge {
+	display: inline-block;
+	padding: 2px 9px;
+	font-size: 12px;
+	font-weight: 600;
+	line-height: 1.6;
+	white-space: nowrap;
+	color: var(--bonsai-ui-muted);
+	background: var(--bonsai-ui-line-soft);
+	border: 1px solid currentColor;
+	border-radius: 999px;
+}
+
+.bonsai-ui-badge--success { color: var(--bonsai-ui-success); background: var(--bonsai-ui-success-bg); }
+.bonsai-ui-badge--warning { color: var(--bonsai-ui-warning); background: var(--bonsai-ui-warning-bg); }
+.bonsai-ui-badge--error { color: var(--bonsai-ui-error); background: var(--bonsai-ui-error-bg); }
+
+/* Status / diagnostics ------------------------------------------------- */
+
+.bonsai-ui-status {
+	display: grid;
+	grid-template-columns: minmax(140px, max-content) 1fr;
+	gap: 10px 24px;
+	margin: 12px 0 0;
+}
+
+.bonsai-ui-status dt {
+	font-weight: 500;
+	color: var(--bonsai-ui-muted);
+}
+
+.bonsai-ui-status dd {
+	margin: 0;
+	word-break: break-word;
+}
+
+/* Help / footer -------------------------------------------------------- */
+
+.bonsai-ui-help {
+	margin: 8px 0 24px;
+	padding: 16px 0 0;
+	font-size: 13px;
+	color: var(--bonsai-ui-muted);
+	border-top: 1px solid var(--bonsai-ui-line);
+}
+
+.bonsai-ui-help p {
+	margin: 0 0 6px;
+}
+
+/* Small screens -------------------------------------------------------- */
+
+@media (max-width: 782px) {
+	.bonsai-ui-header {
+		flex-direction: column;
+		padding: 20px 16px;
+	}
+
+	.bonsai-ui .bonsai-ui-header__title {
+		font-size: 25px;
+	}
+
+	.bonsai-ui-header__meta {
+		align-items: flex-start;
+	}
+
+	.bonsai-ui-card {
+		padding: 20px 16px;
+	}
+
+	.bonsai-ui-card__footer {
+		margin: 16px -16px -20px;
+		padding: 14px 16px;
+	}
+
+	.bonsai-ui-card .form-table th,
+	.bonsai-ui-card .form-table td {
+		padding-right: 0;
+		padding-left: 0;
+	}
+
+	.bonsai-ui-status {
+		grid-template-columns: 1fr;
+		gap: 2px;
+	}
+
+	.bonsai-ui-status dd {
+		margin-bottom: 10px;
+	}
+}
+
+/* Print ---------------------------------------------------------------- */
+
+@media print {
+	.bonsai-ui-header {
+		display: none;
+	}
+}

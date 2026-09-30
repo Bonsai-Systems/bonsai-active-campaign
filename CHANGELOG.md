@@ -6,6 +6,18 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-09-30
+
+### Changed
+- [includes/class-bac-admin-ui.php, assets/] Settings screen restyled with the Bonsai admin design system: logo header with version and GitHub/changelog links; account settings, connection & sync, and synced forms each in their own card. Last sync now shows as a success/failed badge with a status list. Stylesheet loads on this screen only. No option or field changes.
+
+### Fixed
+- [includes/class-bac-settings.php] Field labels weren't tied to their inputs; added `label_for` and IDs.
+- [includes/class-bac-settings.php] Test/sync result notices showed on whichever admin screen the next page load happened to be, and to any admin. They're now stored per user and only shown on the ActiveCampaign settings screen.
+- [includes/class-bac-settings.php] Sanitise callback now guards against non-array input.
+- Removed the inline `style` attribute from the forms table.
+
+
 ## [1.0.1] - 2026-09-24
 
 ### Fixed

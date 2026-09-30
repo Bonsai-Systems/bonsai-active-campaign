@@ -14,12 +14,14 @@ defined( 'ABSPATH' ) || exit;
 class BAC_Settings {
 
 	const PAGE_SLUG = 'bonsai-active-campaign';
+	const HOOK      = 'settings_page_bonsai-active-campaign';
 
 	/**
 	 * Hook everything.
 	 */
 	public static function init() {
 		add_action( 'admin_menu', array( __CLASS__, 'add_page' ) );
+		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_assets' ) );
 		add_action( 'admin_init', array( __CLASS__, 'register' ) );
 		// Keep the cron in step with the configured interval.
 		add_action( 'admin_init', array( 'BAC_Sync', 'schedule' ) );
@@ -55,6 +57,17 @@ class BAC_Settings {
 	}
 
 	/**
+	 * Load the Bonsai admin stylesheet on this screen only.
+	 *
+	 * @param string $hook_suffix Current admin page hook.
+	 */
+	public static function enqueue_assets( $hook_suffix ) {
+		if ( self::HOOK === $hook_suffix ) {
+			BAC_Admin_UI::enqueue();
+		}
+	}
+
+	/**
 	 * Register the setting, section and fields.
 	 */
 	public static function register() {
@@ -82,7 +95,8 @@ class BAC_Settings {
 			__( 'API URL', 'bonsai-active-campaign' ),
 			array( __CLASS__, 'field_api_url' ),
 			self::PAGE_SLUG,
-			'bac_main'
+			'bac_main',
+			array( 'label_for' => 'bac-api-url' )
 		);
 
 		add_settings_field(
@@ -90,7 +104,8 @@ class BAC_Settings {
 			__( 'API Key', 'bonsai-active-campaign' ),
 			array( __CLASS__, 'field_api_key' ),
 			self::PAGE_SLUG,
-			'bac_main'
+			'bac_main',
+			array( 'label_for' => 'bac-api-key' )
 		);
 
 		add_settings_field(
@@ -98,7 +113,8 @@ class BAC_Settings {
 			__( 'Sync frequency', 'bonsai-active-campaign' ),
 			array( __CLASS__, 'field_sync_interval' ),
 			self::PAGE_SLUG,
-			'bac_main'
+			'bac_main',
+			array( 'label_for' => 'bac-sync-interval' )
 		);
 	}
 
@@ -110,6 +126,7 @@ class BAC_Settings {
 	 * @return array
 	 */
 	public static function sanitize( $input ) {
+		$input   = is_array( $input ) ? $input : array();
 		$current = get_option( BAC_OPTION, array() );
 		$clean   = array();
 
@@ -139,7 +156,7 @@ class BAC_Settings {
 		$settings = get_option( BAC_OPTION, array() );
 		$value    = isset( $settings['api_url'] ) ? $settings['api_url'] : '';
 		printf(
-			'<input type="url" class="regular-text" name="%s[api_url]" value="%s" placeholder="https://youraccount.api-us1.com/api/3" />',
+			'<input type="url" id="bac-api-url" class="regular-text" name="%s[api_url]" value="%s" placeholder="https://youraccount.api-us1.com/api/3" />',
 			esc_attr( BAC_OPTION ),
 			esc_attr( $value )
 		);
@@ -152,7 +169,7 @@ class BAC_Settings {
 		$settings = get_option( BAC_OPTION, array() );
 		$has_key  = ! empty( $settings['api_key'] );
 		printf(
-			'<input type="password" class="regular-text" name="%1$s[api_key]" value="" autocomplete="new-password" placeholder="%2$s" />',
+			'<input type="password" id="bac-api-key" class="regular-text" name="%1$s[api_key]" value="" autocomplete="new-password" placeholder="%2$s" />',
 			esc_attr( BAC_OPTION ),
 			$has_key ? esc_attr__( '•••••••• (leave blank to keep current key)', 'bonsai-active-campaign' ) : ''
 		);
@@ -170,7 +187,7 @@ class BAC_Settings {
 			'twicedaily' => __( 'Twice daily', 'bonsai-active-campaign' ),
 			'daily'      => __( 'Daily', 'bonsai-active-campaign' ),
 		);
-		echo '<select name="' . esc_attr( BAC_OPTION ) . '[sync_interval]">';
+		echo '<select id="bac-sync-interval" name="' . esc_attr( BAC_OPTION ) . '[sync_interval]">';
 		foreach ( $choices as $value => $label ) {
 			printf( '<option value="%s"%s>%s</option>', esc_attr( $value ), selected( $current, $value, false ), esc_html( $label ) );
 		}
@@ -185,86 +202,100 @@ class BAC_Settings {
 			return;
 		}
 
-		$last  = get_option( BAC_Sync::STATUS_OPTION, array() );
-		$forms = bac_get_forms();
+		$last     = get_option( BAC_Sync::STATUS_OPTION, array() );
+		$forms    = bac_get_forms();
+		$test_url = wp_nonce_url( admin_url( 'admin-post.php?action=bac_test_connection' ), 'bac_test_connection' );
+		$sync_url = wp_nonce_url( admin_url( 'admin-post.php?action=bac_sync_now' ), 'bac_sync_now' );
 		?>
-		<div class="wrap">
-			<h1><?php esc_html_e( 'Bonsai ActiveCampaign', 'bonsai-active-campaign' ); ?></h1>
+		<div class="wrap bonsai-ui bonsai-ui--narrow">
+			<?php
+			BAC_Admin_UI::header(
+				__( 'Bonsai ActiveCampaign', 'bonsai-active-campaign' ),
+				__( 'Syncs your ActiveCampaign forms into WordPress and renders them natively, without the ActiveCampaign widget or an iframe.', 'bonsai-active-campaign' )
+			);
+			?>
 
 			<form action="options.php" method="post">
-				<?php
-				settings_fields( 'bac_settings_group' );
-				do_settings_sections( self::PAGE_SLUG );
-				submit_button();
-				?>
+				<section class="bonsai-ui-card">
+					<?php
+					settings_fields( 'bac_settings_group' );
+					do_settings_sections( self::PAGE_SLUG );
+					?>
+				</section>
+				<?php submit_button(); ?>
 			</form>
 
-			<hr />
+			<section class="bonsai-ui-card" aria-labelledby="bac-sync-title">
+				<div class="bonsai-ui-card__head">
+					<h2 class="bonsai-ui-card__title" id="bac-sync-title"><?php esc_html_e( 'Connection & sync', 'bonsai-active-campaign' ); ?></h2>
+					<?php if ( ! empty( $last ) ) : ?>
+						<?php if ( $last['success'] ) : ?>
+							<span class="bonsai-ui-badge bonsai-ui-badge--success"><?php esc_html_e( 'Last sync succeeded', 'bonsai-active-campaign' ); ?></span>
+						<?php else : ?>
+							<span class="bonsai-ui-badge bonsai-ui-badge--error"><?php esc_html_e( 'Last sync failed', 'bonsai-active-campaign' ); ?></span>
+						<?php endif; ?>
+					<?php endif; ?>
+				</div>
 
-			<h2><?php esc_html_e( 'Connection & sync', 'bonsai-active-campaign' ); ?></h2>
+				<?php if ( ! empty( $last ) ) : ?>
+					<dl class="bonsai-ui-status">
+						<dt><?php esc_html_e( 'Last sync', 'bonsai-active-campaign' ); ?></dt>
+						<dd><?php echo esc_html( $last['time'] ); ?></dd>
+						<?php if ( ! empty( $last['error'] ) ) : ?>
+							<dt><?php esc_html_e( 'Error', 'bonsai-active-campaign' ); ?></dt>
+							<dd><?php echo esc_html( $last['error'] ); ?></dd>
+						<?php endif; ?>
+						<?php if ( ! empty( $last['stats'] ) ) : ?>
+							<dt><?php esc_html_e( 'Result', 'bonsai-active-campaign' ); ?></dt>
+							<dd>
+								<?php
+								echo esc_html(
+									sprintf(
+										/* translators: %d values: found, inserted, updated, unchanged, deactivated */
+										__( 'Found %1$d · inserted %2$d · updated %3$d · unchanged %4$d · deactivated %5$d', 'bonsai-active-campaign' ),
+										$last['stats']['found'],
+										$last['stats']['inserted'],
+										$last['stats']['updated'],
+										$last['stats']['unchanged'],
+										$last['stats']['deactivated']
+									)
+								);
+								?>
+							</dd>
+						<?php endif; ?>
+					</dl>
+				<?php else : ?>
+					<p class="bonsai-ui-card__intro"><?php esc_html_e( 'No sync has run yet.', 'bonsai-active-campaign' ); ?></p>
+				<?php endif; ?>
 
-			<p>
-				<?php
-				$test_url = wp_nonce_url( admin_url( 'admin-post.php?action=bac_test_connection' ), 'bac_test_connection' );
-				$sync_url = wp_nonce_url( admin_url( 'admin-post.php?action=bac_sync_now' ), 'bac_sync_now' );
-				?>
-				<a href="<?php echo esc_url( $test_url ); ?>" class="button"><?php esc_html_e( 'Test connection', 'bonsai-active-campaign' ); ?></a>
-				<a href="<?php echo esc_url( $sync_url ); ?>" class="button button-primary"><?php esc_html_e( 'Sync forms now', 'bonsai-active-campaign' ); ?></a>
-			</p>
+				<div class="bonsai-ui-card__footer bonsai-ui-actions">
+					<a href="<?php echo esc_url( $test_url ); ?>" class="button"><?php esc_html_e( 'Test connection', 'bonsai-active-campaign' ); ?></a>
+					<a href="<?php echo esc_url( $sync_url ); ?>" class="button button-primary"><?php esc_html_e( 'Sync forms now', 'bonsai-active-campaign' ); ?></a>
+				</div>
+			</section>
 
-			<?php if ( ! empty( $last ) ) : ?>
-				<p>
-					<strong><?php esc_html_e( 'Last sync:', 'bonsai-active-campaign' ); ?></strong>
-					<?php
-					echo esc_html(
-						sprintf(
-							/* translators: 1: date/time, 2: outcome */
-							__( '%1$s — %2$s', 'bonsai-active-campaign' ),
-							$last['time'],
-							$last['success'] ? __( 'success', 'bonsai-active-campaign' ) : __( 'failed', 'bonsai-active-campaign' )
-						)
-					);
-					if ( ! empty( $last['error'] ) ) {
-						echo ' (' . esc_html( $last['error'] ) . ')';
-					}
-					if ( ! empty( $last['stats'] ) ) {
-						echo '<br />';
-						echo esc_html(
-							sprintf(
-								/* translators: %d values: found, inserted, updated, unchanged, deactivated */
-								__( 'Found %1$d · inserted %2$d · updated %3$d · unchanged %4$d · deactivated %5$d', 'bonsai-active-campaign' ),
-								$last['stats']['found'],
-								$last['stats']['inserted'],
-								$last['stats']['updated'],
-								$last['stats']['unchanged'],
-								$last['stats']['deactivated']
-							)
-						);
-					}
-					?>
-				</p>
-			<?php endif; ?>
-
-			<h2><?php esc_html_e( 'Synced forms', 'bonsai-active-campaign' ); ?></h2>
-			<?php if ( $forms ) : ?>
-				<p><?php esc_html_e( 'Use the ID in the ActiveCampaign Form ID field on a module.', 'bonsai-active-campaign' ); ?></p>
-				<table class="widefat striped" style="max-width:640px">
-					<thead><tr>
-						<th><?php esc_html_e( 'ID', 'bonsai-active-campaign' ); ?></th>
-						<th><?php esc_html_e( 'Name', 'bonsai-active-campaign' ); ?></th>
-					</tr></thead>
-					<tbody>
-						<?php foreach ( $forms as $form ) : ?>
-							<tr>
-								<td><?php echo esc_html( $form['ac_form_id'] ); ?></td>
-								<td><?php echo esc_html( $form['name'] ); ?></td>
-							</tr>
-						<?php endforeach; ?>
-					</tbody>
-				</table>
-			<?php else : ?>
-				<p><?php esc_html_e( 'No forms synced yet. Save your API details, then click “Sync forms now”.', 'bonsai-active-campaign' ); ?></p>
-			<?php endif; ?>
+			<section class="bonsai-ui-card" aria-labelledby="bac-forms-title">
+				<h2 class="bonsai-ui-card__title" id="bac-forms-title"><?php esc_html_e( 'Synced forms', 'bonsai-active-campaign' ); ?></h2>
+				<?php if ( $forms ) : ?>
+					<p class="bonsai-ui-card__intro"><?php esc_html_e( 'Use the ID in the ActiveCampaign Form ID field on a module.', 'bonsai-active-campaign' ); ?></p>
+					<table class="widefat striped">
+						<thead><tr>
+							<th scope="col"><?php esc_html_e( 'ID', 'bonsai-active-campaign' ); ?></th>
+							<th scope="col"><?php esc_html_e( 'Name', 'bonsai-active-campaign' ); ?></th>
+						</tr></thead>
+						<tbody>
+							<?php foreach ( $forms as $form ) : ?>
+								<tr>
+									<td><?php echo esc_html( $form['ac_form_id'] ); ?></td>
+									<td><?php echo esc_html( $form['name'] ); ?></td>
+								</tr>
+							<?php endforeach; ?>
+						</tbody>
+					</table>
+				<?php else : ?>
+					<p class="bonsai-ui-card__intro"><?php esc_html_e( 'No forms synced yet. Save your API details, then click “Sync forms now”.', 'bonsai-active-campaign' ); ?></p>
+				<?php endif; ?>
+			</section>
 		</div>
 		<?php
 	}
@@ -331,7 +362,7 @@ class BAC_Settings {
 	 * @param string $message Message.
 	 */
 	private static function redirect_with_notice( $type, $message ) {
-		set_transient( 'bac_admin_notice', array( 'type' => $type, 'message' => $message ), 30 );
+		set_transient( self::notice_key(), array( 'type' => $type, 'message' => $message ), 30 );
 		wp_safe_redirect( admin_url( 'options-general.php?page=' . self::PAGE_SLUG ) );
 		exit;
 	}
@@ -340,16 +371,30 @@ class BAC_Settings {
 	 * Print the stashed notice.
 	 */
 	public static function admin_notices() {
-		$notice = get_transient( 'bac_admin_notice' );
+		$screen = get_current_screen();
+		if ( ! $screen || self::HOOK !== $screen->id ) {
+			return;
+		}
+
+		$notice = get_transient( self::notice_key() );
 		if ( ! $notice || empty( $notice['message'] ) ) {
 			return;
 		}
-		delete_transient( 'bac_admin_notice' );
+		delete_transient( self::notice_key() );
 
 		printf(
 			'<div class="notice notice-%s is-dismissible"><p>%s</p></div>',
 			'error' === $notice['type'] ? 'error' : 'success',
 			esc_html( $notice['message'] )
 		);
+	}
+
+	/**
+	 * Per-user transient key, so one admin's result never shows to another.
+	 *
+	 * @return string
+	 */
+	private static function notice_key() {
+		return 'bac_admin_notice_' . get_current_user_id();
 	}
 }
