@@ -30,7 +30,7 @@ class BAC_Submit {
 			'bac-form',
 			BAC_URL . 'assets/js/bac-form.js',
 			array( 'jquery' ),
-			BAC_VERSION,
+			self::asset_version( 'assets/js/bac-form.js' ),
 			true
 		);
 
@@ -49,8 +49,22 @@ class BAC_Submit {
 			'bac-form',
 			BAC_URL . 'assets/css/bac-form.css',
 			array(),
-			BAC_VERSION
+			self::asset_version( 'assets/css/bac-form.css' )
 		);
+	}
+
+	/**
+	 * Cache-busting version for a front-end asset: BAC_VERSION plus the file's
+	 * modified time, so browsers and page caches pick up changed JS/CSS even
+	 * when BAC_VERSION hasn't been bumped.
+	 *
+	 * @param string $relative Path relative to the plugin folder.
+	 * @return string
+	 */
+	private static function asset_version( $relative ) {
+		$mtime = file_exists( BAC_DIR . $relative ) ? filemtime( BAC_DIR . $relative ) : false;
+
+		return $mtime ? BAC_VERSION . '.' . $mtime : BAC_VERSION;
 	}
 
 	/**
