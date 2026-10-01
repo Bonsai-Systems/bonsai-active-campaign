@@ -38,7 +38,7 @@ $bac_update_checker = PucFactory::buildUpdateChecker(
 $bac_update_checker->setBranch( 'main' );
 $bac_update_checker->getVcsApi()->enableReleaseAssets();
 
-define( 'BAC_VERSION', '1.2.2' );
+define( 'BAC_VERSION', '1.2.1' );
 define( 'BAC_FILE', __FILE__ );
 define( 'BAC_DIR', plugin_dir_path( __FILE__ ) );
 define( 'BAC_URL', plugin_dir_url( __FILE__ ) );
