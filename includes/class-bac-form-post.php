@@ -212,7 +212,47 @@ class BAC_Form_Post {
 			$error .= ': ' . wp_strip_all_tags( stripslashes( $m[2] ) );
 		}
 
+		self::log_response( $form_id, $response, $raw );
+
 		return array( 'success' => false, 'error' => $error );
+	}
+
+	/**
+	 * Log what proc.php actually sent back when the response wasn't recognised,
+	 * so unexpected formats (HTML, JSON, a followed redirect) can be diagnosed.
+	 *
+	 * @param int    $form_id  ActiveCampaign form ID.
+	 * @param array  $response wp_remote_post() response.
+	 * @param string $raw      Response body.
+	 */
+	private static function log_response( $form_id, $response, $raw ) {
+		if ( ! defined( 'WP_DEBUG' ) || ! WP_DEBUG ) {
+			return;
+		}
+
+		$type = (string) wp_remote_retrieve_header( $response, 'content-type' );
+
+		// Final URL differs from proc.php when WP followed a redirect (e.g. to the form's thank-you page).
+		$final_url = '';
+		if ( isset( $response['http_response'] ) && $response['http_response'] instanceof WP_HTTP_Requests_Response ) {
+			$final_url = (string) $response['http_response']->get_response_object()->url;
+		}
+
+		// Keep visitor email addresses out of the log (plain and URL-encoded). Mask before truncating.
+		$email_pattern = '/[^\s@"\'<>=&?\/]+(@|%40)[^\s@"\'<>&]+\.[a-z]{2,}/i';
+		$snippet       = trim( preg_replace( '/\s+/', ' ', wp_strip_all_tags( $raw ) ) );
+		$snippet       = substr( preg_replace( $email_pattern, '[email]', $snippet ), 0, 500 );
+		$final_url     = preg_replace( $email_pattern, '[email]', $final_url );
+
+		self::log(
+			sprintf(
+				'proc.php response for form %d — content-type: %s; final URL: %s; body: %s',
+				absint( $form_id ),
+				$type ? $type : '(none)',
+				$final_url ? $final_url : '(unknown)',
+				'' !== $snippet ? $snippet : '(empty)'
+			)
+		);
 	}
 
 	/**

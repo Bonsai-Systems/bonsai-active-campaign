@@ -6,6 +6,9 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+- [includes/class-bac-form-post.php] When a `proc.php` response isn't recognised, the debug log (with `WP_DEBUG`) now records the response content type, the final URL if a redirect was followed, and the first 500 characters of the body with tags stripped. Email addresses are masked.
+
 ## [1.2.0] - 2026-10-01
 
 ### Fixed
