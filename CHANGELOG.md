@@ -6,6 +6,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-10-01
+
 ### Fixed
 - [includes/class-bac-form-post.php] Form submissions always fell back to the API, so "Submits a form" automations still didn't run. The plugin always POSTed to `proc.php`, but ActiveCampaign's embed only POSTs for forms with `formSupportsPost = true`. For every other form it loads `proc.php?{fields}&jsonp=true` with a GET, and a POST got back a 200 the plugin didn't recognise. The plugin now reads `formSupportsPost` from the embed and submits the same way. GET by default, with the query string built like the embed's (`field[N][]` for checkboxes, RFC 3986 encoding). POST forms send `Accept: application/json`, and the `{"js": …}` response is unwrapped before checking for `_show_thank_you`. Embed values cached by 1.2.0 have no `formSupportsPost` value and fall back to GET.
 
