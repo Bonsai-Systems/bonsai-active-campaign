@@ -6,6 +6,12 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+- [includes/class-bac-form-post.php] Forms set to **redirect to URL** submitted fine but didn't redirect. The plugin only recognised `location.href = "…"` / `location = "…"` in the `proc.php` reply. New `BAC_Form_Post::extract_redirect()` also handles `location.replace("…")` and `location.assign("…")` on `window`, `top` or `window.top`, and undoes `\/` and `\u0026` escaping. The site tracking URL passed to `_show_thank_you()` is never treated as a redirect.
+
+### Changed
+- [includes/class-bac-form-post.php] With `WP_DEBUG` on, successful `proc.php` replies are now logged too, along with the redirect URL found (or `(none found)`), so the reply format can be checked. The body snippet is now 1,000 characters (was 500). Emails are masked, including in the redirect URL.
+
 ## [1.2.2] - 2026-10-01
 
 ### Fixed

@@ -240,11 +240,7 @@ class BAC_Form_Post {
 			$js = $json['js'];
 		}
 
-		// Forms set to "redirect to URL" on submit answer with window.top.location.href = "…".
-		$redirect = '';
-		if ( preg_match( '#location(?:\.href)?\s*=\s*([\'"])(.*?)\1#s', $js, $r ) ) {
-			$redirect = esc_url_raw( stripslashes( $r[2] ), array( 'http', 'https' ) );
-		}
+		$redirect = self::extract_redirect( $js );
 
 		// Success is _show_thank_you(...) (show a message) or a redirect; failure is _show_error(...).
 		if (
@@ -252,6 +248,9 @@ class BAC_Form_Post {
 			&& false === strpos( $js, '_show_error' )
 			&& ( false !== strpos( $js, '_show_thank_you' ) || $redirect )
 		) {
+			// Log successful replies too, so the redirect format AC uses can be checked.
+			self::log_response( $form_id, $response, $raw, 'success; redirect: ' . ( $redirect ? $redirect : '(none found)' ) );
+
 			return array( 'success' => true, 'error' => null, 'redirect' => $redirect );
 		}
 
@@ -263,20 +262,55 @@ class BAC_Form_Post {
 			$error .= ': ' . wp_strip_all_tags( stripslashes( $m[2] ) );
 		}
 
-		self::log_response( $form_id, $response, $raw );
+		self::log_response( $form_id, $response, $raw, 'not recognised' );
 
 		return array( 'success' => false, 'error' => $error );
 	}
 
 	/**
-	 * Log what proc.php actually sent back when the response wasn't recognised,
-	 * so unexpected formats (HTML, JSON, a followed redirect) can be diagnosed.
+	 * Find the "redirect to URL" target in proc.php's JavaScript reply.
+	 *
+	 * The embed just runs whatever proc.php returns, so the redirect is plain JS.
+	 * Accepts the usual forms: location = "…", location.href = "…",
+	 * location.replace("…") and location.assign("…"), on window, top or
+	 * window.top. The tracking URL passed to _show_thank_you() is not matched.
+	 *
+	 * @param string $js proc.php reply (unwrapped from JSON on the POST route).
+	 * @return string URL (http/https only), or '' if none found.
+	 */
+	public static function extract_redirect( $js ) {
+		$patterns = array(
+			'#location(?:\.href)?\s*=\s*([\'"])(.*?)(?<!\\\\)\1#s',
+			'#location\.(?:replace|assign)\(\s*([\'"])(.*?)(?<!\\\\)\1#s',
+		);
+
+		foreach ( $patterns as $pattern ) {
+			if ( ! preg_match( $pattern, (string) $js, $r ) ) {
+				continue;
+			}
+
+			// Undo JS string escaping (\/ and \u0026) before validating.
+			$url = stripslashes( str_ireplace( '\u0026', '&', $r[2] ) );
+			$url = esc_url_raw( html_entity_decode( $url ), array( 'http', 'https' ) );
+
+			if ( $url ) {
+				return $url;
+			}
+		}
+
+		return '';
+	}
+
+	/**
+	 * Log what proc.php sent back (with WP_DEBUG), so unexpected formats (HTML,
+	 * JSON, a followed redirect, a redirect script we don't parse) can be diagnosed.
 	 *
 	 * @param int    $form_id  ActiveCampaign form ID.
 	 * @param array  $response wp_remote_post() response.
 	 * @param string $raw      Response body.
+	 * @param string $outcome  How the response was treated, e.g. "not recognised".
 	 */
-	private static function log_response( $form_id, $response, $raw ) {
+	private static function log_response( $form_id, $response, $raw, $outcome ) {
 		if ( ! defined( 'WP_DEBUG' ) || ! WP_DEBUG ) {
 			return;
 		}
@@ -292,13 +326,15 @@ class BAC_Form_Post {
 		// Keep visitor email addresses out of the log (plain and URL-encoded). Mask before truncating.
 		$email_pattern = '/[^\s@"\'<>=&?\/]+(@|%40)[^\s@"\'<>&]+\.[a-z]{2,}/i';
 		$snippet       = trim( preg_replace( '/\s+/', ' ', wp_strip_all_tags( $raw ) ) );
-		$snippet       = substr( preg_replace( $email_pattern, '[email]', $snippet ), 0, 500 );
+		$snippet       = substr( preg_replace( $email_pattern, '[email]', $snippet ), 0, 1000 );
 		$final_url     = preg_replace( $email_pattern, '[email]', $final_url );
+		$outcome       = preg_replace( $email_pattern, '[email]', $outcome ); // A redirect URL can carry the email.
 
 		self::log(
 			sprintf(
-				'proc.php response for form %d — content-type: %s; final URL: %s; body: %s',
+				'proc.php response for form %d (%s) — content-type: %s; final URL: %s; body: %s',
 				absint( $form_id ),
+				$outcome,
 				$type ? $type : '(none)',
 				$final_url ? $final_url : '(unknown)',
 				'' !== $snippet ? $snippet : '(empty)'
