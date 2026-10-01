@@ -186,6 +186,22 @@ class BAC_Api {
 	}
 
 	/**
+	 * Look up a contact's ID by email.
+	 *
+	 * @param string $email Email address.
+	 * @return int Contact ID, or 0 if not found / on error.
+	 */
+	public function find_contact_id_by_email( $email ) {
+		$result = $this->request( 'GET', 'contacts?' . http_build_query( array( 'email' => $email ) ) );
+
+		if ( ! $result['success'] || empty( $result['data']['contacts'][0]['id'] ) ) {
+			return 0;
+		}
+
+		return (int) $result['data']['contacts'][0]['id'];
+	}
+
+	/**
 	 * Add a contact to a list (status 1 = subscribed).
 	 *
 	 * @param int $list_id    List ID.

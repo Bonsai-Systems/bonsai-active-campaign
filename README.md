@@ -1,8 +1,8 @@
 # Bonsai ActiveCampaign
 
 Connects a WordPress site to an ActiveCampaign account so ActiveCampaign forms
-can be rendered and submitted natively — no ActiveCampaign JavaScript widget, no
-`proc.php` iframe.
+can be rendered and submitted natively. The ActiveCampaign JavaScript widget
+and iframe are never loaded.
 
 ## What it does
 
@@ -15,10 +15,29 @@ can be rendered and submitted natively — no ActiveCampaign JavaScript widget, 
    successful fetch, so a partial API response can never wipe live forms.
 3. **Render** — `bac_render_form( $id )` outputs the form (fields, labels,
    button text, thank-you copy all come from ActiveCampaign).
-4. **Submit** — the form posts to `admin-ajax.php`. The plugin creates/updates
-   the contact via `POST /api/3/contact/sync`, then adds them to the form's
-   list via `POST /api/3/contactLists`. On success the form is replaced by the
-   ActiveCampaign thank-you message.
+4. **Submit**: the form posts to `admin-ajax.php`, and the plugin then
+   submits it server-side to ActiveCampaign's own form endpoint
+   (`https://{account}.activehosted.com/proc.php`), the same one AC landing
+   pages use. ActiveCampaign records it as a real form submission, so
+   automations that start on **"Submits a form"** fire, and the form's own
+   actions (tags, lists, double opt-in) apply. On success the form is
+   replaced by the ActiveCampaign thank-you message.
+   - `proc.php` needs per-form hidden values (`u`, `or`) that the API doesn't
+     return. They're read from the form's public embed script
+     (`/f/embed.php?id={id}`) and cached for 12 hours. The account host comes
+     from the API URL (`acct.api-us1.com` → `acct.activehosted.com`); override
+     it with the `bac_form_host` filter.
+   - **Fallback:** if the form post fails, the plugin creates/updates the
+     contact via `POST /api/3/contact/sync` and subscribes them to the form's
+     list via `POST /api/3/contactLists`, so the lead isn't lost. The failure is
+     logged when `WP_DEBUG` is on. "Submits a form" automations **don't** fire
+     for fallback submissions.
+   - Turn the form post off with
+     `add_filter( 'bac_use_form_post', '__return_false' );` (API-only, as in
+     1.1.0).
+   - Forms with reCAPTCHA enabled in ActiveCampaign can't be submitted
+     server-side; they always use the fallback. Turn reCAPTCHA off on forms
+     used with this plugin.
 
 ## Theme API
 
@@ -204,10 +223,10 @@ Contributions welcome; delete an item when it ships and add a CHANGELOG entry.
 Native rendering means AC's own JS widget never loads, so anything it used to do
 for the form is now ours to reproduce:
 
-- **Honour all of the form's configured actions.** The submit handler currently
-  does `contact/sync` + a single `contactLists` subscribe. AC forms can also
-  define tags, multiple lists, custom-field writes and deal actions in their
-  `action_data` — parse and apply those.
+- **Honour all of the form's configured actions in the API fallback.** The
+  `proc.php` submission (1.2.0+) already applies them. The API fallback only
+  does `contact/sync` plus a single `contactLists` subscribe; it could also
+  parse tags, extra lists and deal actions from `action_data`.
 - **Honour the form's redirect action.** If the AC form is set to redirect on
   submit rather than show a thank-you message, follow that instead of the
   inline swap. Fall back to inline when none is set.

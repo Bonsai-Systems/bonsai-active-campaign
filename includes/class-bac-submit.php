@@ -85,29 +85,37 @@ class BAC_Submit {
 				wp_send_json_error( array( 'message' => __( 'Please enter a valid email address.', 'bonsai-active-campaign' ) ), 400 );
 			}
 
-			// 1. Create or update the contact.
-			$contact_result = $api->sync_contact( $submission['contact'] );
-			if ( ! $contact_result['success'] || empty( $contact_result['data']['contact']['id'] ) ) {
-				self::log( 'contact/sync failed for form ' . $form_id . ': ' . ( $contact_result['error'] ?? 'no contact id' ) );
-				wp_send_json_error( array( 'message' => __( 'Sorry, we couldn\'t send that. Please try again.', 'bonsai-active-campaign' ) ), 502 );
-			}
+			/**
+			 * Filter whether to submit through ActiveCampaign's form endpoint
+			 * (proc.php) before falling back to the API.
+			 *
+			 * @param bool $use     Default true.
+			 * @param int  $form_id ActiveCampaign form ID.
+			 */
+			$use_form_post = apply_filters( 'bac_use_form_post', true, $form_id );
 
-			$contact_id = (int) $contact_result['data']['contact']['id'];
+			// 1. Preferred: a real ActiveCampaign form submission, so "Submits a form"
+			//    automations and the form's own actions (tags, lists, opt-in) run.
+			$posted = $use_form_post
+				? BAC_Form_Post::submit( $form_id, $submission['proc'] )
+				: array( 'success' => false, 'error' => 'disabled by bac_use_form_post filter' );
 
-			// 2. Add the contact to the form's list.
-			$list_id = bac_get_form_list_id( $form );
-			if ( ! $list_id && isset( $_POST['bac_list_id'] ) ) {
-				$list_id = absint( $_POST['bac_list_id'] );
-			}
-
-			if ( $list_id ) {
-				$list_result = $api->add_contact_to_list( $list_id, $contact_id );
-				if ( ! $list_result['success'] ) {
-					self::log( 'contactLists failed for form ' . $form_id . ' (list ' . $list_id . '): ' . $list_result['error'] );
-					// The contact was still saved — don't fail the visitor over the list step.
-				}
+			if ( $posted['success'] ) {
+				// proc.php doesn't return the contact, so look it up for the action hook.
+				$contact_id = $api->find_contact_id_by_email( $submission['contact']['email'] );
 			} else {
-				self::log( 'No list resolved for form ' . $form_id . ' — contact saved but not subscribed.' );
+				// 2. Fallback: API v3, so the lead isn't lost. Form automations won't fire.
+				self::log( 'proc.php submission failed for form ' . $form_id . ' (' . $posted['error'] . '); falling back to API — "Submits a form" automations will not run for this contact.' );
+
+				$list_id = bac_get_form_list_id( $form );
+				if ( ! $list_id && isset( $_POST['bac_list_id'] ) ) {
+					$list_id = absint( $_POST['bac_list_id'] );
+				}
+
+				$contact_id = self::submit_via_api( $api, $form_id, $submission['contact'], $list_id );
+				if ( ! $contact_id ) {
+					wp_send_json_error( array( 'message' => __( 'Sorry, we couldn\'t send that. Please try again.', 'bonsai-active-campaign' ) ), 502 );
+				}
 			}
 
 			/**
@@ -132,24 +140,57 @@ class BAC_Submit {
 	}
 
 	/**
-	 * Turn $_POST into a normalised ActiveCampaign contact payload, using the
-	 * form definition as the whitelist of accepted fields.
+	 * API v3 fallback: create/update the contact and subscribe them to the list.
+	 *
+	 * @param BAC_Api $api     API client.
+	 * @param int     $form_id ActiveCampaign form ID (for logging).
+	 * @param array   $contact contact/sync payload.
+	 * @param int     $list_id List to subscribe to (0 = none).
+	 * @return int Contact ID, or 0 on failure.
+	 */
+	private static function submit_via_api( $api, $form_id, $contact, $list_id ) {
+		$contact_result = $api->sync_contact( $contact );
+		if ( ! $contact_result['success'] || empty( $contact_result['data']['contact']['id'] ) ) {
+			self::log( 'contact/sync failed for form ' . $form_id . ': ' . ( $contact_result['error'] ?? 'no contact id' ) );
+			return 0;
+		}
+
+		$contact_id = (int) $contact_result['data']['contact']['id'];
+
+		if ( $list_id ) {
+			$list_result = $api->add_contact_to_list( $list_id, $contact_id );
+			if ( ! $list_result['success'] ) {
+				self::log( 'contactLists failed for form ' . $form_id . ' (list ' . $list_id . '): ' . $list_result['error'] );
+				// The contact was still saved — don't fail the visitor over the list step.
+			}
+		} else {
+			self::log( 'No list resolved for form ' . $form_id . ' — contact saved but not subscribed.' );
+		}
+
+		return $contact_id;
+	}
+
+	/**
+	 * Turn $_POST into normalised ActiveCampaign payloads, using the form
+	 * definition as the whitelist of accepted fields.
 	 *
 	 * @param array $form Form array from bac_get_form().
-	 * @return array array( 'contact' => array, 'raw' => array )
+	 * @return array array( 'contact' => API contact/sync payload, 'proc' => proc.php payload, 'raw' => array )
 	 */
 	private static function collect_submission( $form ) {
 		$contact = array( 'fieldValues' => array() );
+		$proc    = array();
 		$raw     = array();
 
 		// phpcs:ignore WordPress.Security.NonceVerification.Missing -- nonce checked in handle() before this runs.
 		$post = wp_unslash( $_POST );
 
+		// Our field name => array( API v3 contact key, proc.php field name ).
 		$standard_map = array(
-			'email'      => 'email',
-			'first_name' => 'firstName',
-			'last_name'  => 'lastName',
-			'phone'      => 'phone',
+			'email'      => array( 'email', 'email' ),
+			'first_name' => array( 'firstName', 'firstname' ),
+			'last_name'  => array( 'lastName', 'lastname' ),
+			'phone'      => array( 'phone', 'phone' ),
 		);
 
 		foreach ( $form['fields_data'] as $field ) {
@@ -160,23 +201,34 @@ class BAC_Submit {
 
 			// Custom field: field[123].
 			if ( preg_match( '/^field\[(\d+)\]$/', $name, $m ) ) {
-				$key = 'field_' . $m[1];
+				$field_id = (int) $m[1];
+				$key      = 'field_' . $m[1];
 				if ( ! isset( $post[ $key ] ) && isset( $post[ 'field' ][ $m[1] ] ) ) {
 					$value = $post['field'][ $m[1] ];
 				} else {
 					$value = $post[ $key ] ?? ( $post[ 'field' ][ $m[1] ] ?? '' );
 				}
 
-				// Checkboxes arrive as arrays; ActiveCampaign wants "||a||b||".
 				if ( is_array( $value ) ) {
-					$value = '||' . implode( '||', array_map( 'sanitize_text_field', $value ) ) . '||';
+					$values = array_values( array_filter( array_map( 'sanitize_text_field', $value ), 'strlen' ) );
+					// API v3 wants checkboxes as "||a||b||".
+					$value = $values ? '||' . implode( '||', $values ) . '||' : '';
 				} else {
-					$value = sanitize_text_field( $value );
+					$values = null;
+					$value  = sanitize_text_field( $value );
+				}
+
+				// proc.php: checkboxes are field[N][] led by the "~|" marker, exactly as
+				// AC's own embed sends them (the marker alone means "none ticked").
+				if ( 'checkbox' === ( $field['type'] ?? '' ) ) {
+					$proc['field'][ $field_id ] = array_merge( array( '~|' ), $values ? $values : array() );
+				} elseif ( '' !== $value ) {
+					$proc['field'][ $field_id ] = $value;
 				}
 
 				if ( '' !== $value ) {
 					$contact['fieldValues'][] = array(
-						'field' => (int) $m[1],
+						'field' => $field_id,
 						'value' => $value,
 					);
 					$raw[ $name ] = $value;
@@ -186,18 +238,19 @@ class BAC_Submit {
 
 			// Standard field.
 			if ( isset( $standard_map[ $name ] ) ) {
-				$value = isset( $post[ $name ] ) ? sanitize_text_field( $post[ $name ] ) : '';
+				$value = isset( $post[ $name ] ) && ! is_array( $post[ $name ] ) ? sanitize_text_field( $post[ $name ] ) : '';
 				if ( 'email' === $name ) {
 					$value = sanitize_email( $value );
 				}
 				if ( '' !== $value ) {
-					$contact[ $standard_map[ $name ] ] = $value;
-					$raw[ $name ]                      = $value;
+					$contact[ $standard_map[ $name ][0] ] = $value;
+					$proc[ $standard_map[ $name ][1] ]    = $value;
+					$raw[ $name ]                         = $value;
 				}
 			}
 		}
 
-		return array( 'contact' => $contact, 'raw' => $raw );
+		return array( 'contact' => $contact, 'proc' => $proc, 'raw' => $raw );
 	}
 
 	/**

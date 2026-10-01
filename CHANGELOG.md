@@ -6,6 +6,16 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-10-01
+
+### Fixed
+- [includes/class-bac-form-post.php (new), includes/class-bac-submit.php, includes/class-bac-api.php] Submissions didn't start ActiveCampaign automations with a **"Submits a form"** trigger, and the form's own actions (tags, extra lists, double opt-in) were never applied. The plugin only created the contact and subscribed them to a list via API v3, which ActiveCampaign doesn't record as a form submission. Forms now submit server-side to the account's `proc.php`, the same endpoint AC landing pages and embeds use. The per-form hidden values (`u`, `or`) are read from the public `/f/embed.php?id={id}` script and cached for 12 hours. The cache is cleared on a failed post so edited forms pick up new values. The action URL must be `https://{account}.activehosted.com/proc.php` or it's rejected. Payload matches AC's embed: `firstname`/`lastname`, `field[N]`, and checkboxes as `field[N][]` with the `~|` marker.
+
+### Added
+- API v3 fallback: if the `proc.php` post fails, the previous `contact/sync` + `contactLists` flow runs so the lead isn't lost, and the failure is logged (with `WP_DEBUG`).
+- `bac_use_form_post` filter (default `true`) to turn the form post off; `bac_form_host` filter to override the derived `acct.activehosted.com` host.
+- `BAC_Api::find_contact_id_by_email()`. `bac_form_submitted` still receives the contact ID after a `proc.php` submission.
+
 ## [1.1.0] - 2026-09-30
 
 ### Changed

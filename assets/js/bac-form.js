@@ -2,8 +2,9 @@
  * Bonsai ActiveCampaign — front-end form submission.
  *
  * Each rendered form posts to admin-ajax.php (action: bac_submit_form). The
- * plugin creates/updates the contact server-side and adds them to the form's
- * list. On success the form is replaced by the ActiveCampaign "thanks" copy.
+ * plugin submits it server-side to ActiveCampaign's own form endpoint
+ * (proc.php), falling back to the API v3 if that fails. See class-bac-form-post.php.
+ * On success the form is replaced by the ActiveCampaign "thanks" copy.
  */
 (function ($) {
 	'use strict';
