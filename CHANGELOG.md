@@ -6,6 +6,8 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.2.2] - 2026-10-01
+
 ### Fixed
 - [includes/class-bac-form-post.php] Successful submissions on forms set to **redirect to URL** were treated as failures and also went through the API fallback. For these forms `proc.php` answers with `window.top.location.href = "…"` instead of `_show_thank_you(...)`. A redirect now counts as success, as long as there's no `_show_error`.
 
