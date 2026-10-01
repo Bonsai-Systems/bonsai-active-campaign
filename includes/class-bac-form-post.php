@@ -5,9 +5,10 @@
  * Why: automations with a "Submits a form" start trigger, and the form's own
  * actions (tags, lists, double opt-in), only run when ActiveCampaign records a
  * real form submission. Creating the contact via the API v3 does not count as
- * one. This class posts server-side to the same proc.php endpoint the
- * ActiveCampaign embed / landing pages use, so the submission behaves exactly
- * as if it came from ActiveCampaign's own form.
+ * one. This class submits server-side to the same proc.php endpoint the
+ * ActiveCampaign embed / landing pages use, the same way the embed does (GET
+ * by default, POST only for forms flagged formSupportsPost), so the submission
+ * behaves exactly as if it came from ActiveCampaign's own form.
  *
  * proc.php needs per-form hidden values (u, or, …) that the API doesn't
  * return, so they are read from the form's public embed script
@@ -162,7 +163,23 @@ class BAC_Form_Post {
 		return array(
 			'action' => 'https://' . $parsed['host'] . '/proc.php',
 			'hidden' => $hidden,
+			// AC's embed only POSTs when the form opts in; otherwise it loads proc.php as a script (GET).
+			'post'   => (bool) preg_match( '#formSupportsPost\s*=\s*true#', $html ),
 		);
+	}
+
+	/**
+	 * Build a proc.php query string the way AC's embed serialises the form:
+	 * RFC 3986 encoding, and array fields as field[N][] rather than field[N][0].
+	 *
+	 * @param array $body Submission payload.
+	 * @return string
+	 */
+	private static function build_query( array $body ) {
+		$query = http_build_query( $body, '', '&', PHP_QUERY_RFC3986 );
+
+		// field%5B276%5D%5B0%5D= -> field%5B276%5D%5B%5D=
+		return preg_replace( '#(%5D)%5B\d+%5D=#', '$1%5B%5D=', $query );
 	}
 
 	/**
@@ -180,17 +197,33 @@ class BAC_Form_Post {
 
 		$body = array_merge( $params['hidden'], $fields );
 
-		$response = wp_remote_post(
-			$params['action'] . '?jsonp=true',
-			array(
-				'timeout' => 20,
-				'body'    => $body,
-				'headers' => array(
-					// proc.php uses the referer as the submission's source page.
-					'Referer' => wp_get_referer() ? wp_get_referer() : home_url( '/' ),
-				),
-			)
-		);
+		// proc.php uses the referer as the submission's source page.
+		$referer = wp_get_referer() ? wp_get_referer() : home_url( '/' );
+
+		// Submit exactly as the form's own embed would (see parse_embed()).
+		if ( ! empty( $params['post'] ) ) {
+			// formSupportsPost = true: POST, answered with JSON { "js": "_show_thank_you(...)" }.
+			$response = wp_remote_post(
+				$params['action'] . '?jsonp=true',
+				array(
+					'timeout' => 20,
+					'body'    => $body,
+					'headers' => array(
+						'Accept'  => 'application/json',
+						'Referer' => $referer,
+					),
+				)
+			);
+		} else {
+			// Default: GET with the fields in the query string, answered with plain JS.
+			$response = wp_remote_get(
+				$params['action'] . '?' . self::build_query( $body ) . '&jsonp=true',
+				array(
+					'timeout' => 20,
+					'headers' => array( 'Referer' => $referer ),
+				)
+			);
+		}
 
 		if ( is_wp_error( $response ) ) {
 			return array( 'success' => false, 'error' => $response->get_error_message() );
@@ -199,8 +232,15 @@ class BAC_Form_Post {
 		$status = (int) wp_remote_retrieve_response_code( $response );
 		$raw    = (string) wp_remote_retrieve_body( $response );
 
-		// jsonp=true answers with JS calling _show_thank_you(...) or _show_error(...).
-		if ( $status >= 200 && $status < 300 && false !== strpos( $raw, '_show_thank_you' ) ) {
+		// The POST route wraps the JS in JSON; the GET route returns it as-is.
+		$js   = $raw;
+		$json = json_decode( $raw, true );
+		if ( is_array( $json ) && isset( $json['js'] ) && is_string( $json['js'] ) ) {
+			$js = $json['js'];
+		}
+
+		// The JS calls _show_thank_you(...) on success or _show_error(...) on failure.
+		if ( $status >= 200 && $status < 300 && false !== strpos( $js, '_show_thank_you' ) ) {
 			return array( 'success' => true, 'error' => null );
 		}
 
@@ -208,7 +248,7 @@ class BAC_Form_Post {
 		delete_transient( 'bac_embed_' . absint( $form_id ) );
 
 		$error = 'HTTP ' . $status;
-		if ( preg_match( '#_show_error\(\s*[^,]*,\s*([\'"])(.*?)\1#s', $raw, $m ) ) {
+		if ( preg_match( '#_show_error\(\s*[^,]*,\s*([\'"])(.*?)\1#s', $js, $m ) ) {
 			$error .= ': ' . wp_strip_all_tags( stripslashes( $m[2] ) );
 		}
 
