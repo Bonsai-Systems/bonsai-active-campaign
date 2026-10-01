@@ -100,9 +100,21 @@ class BAC_Submit {
 				? BAC_Form_Post::submit( $form_id, $submission['proc'] )
 				: array( 'success' => false, 'error' => 'disabled by bac_use_form_post filter' );
 
+			$redirect = '';
+
 			if ( $posted['success'] ) {
 				// proc.php doesn't return the contact, so look it up for the action hook.
 				$contact_id = $api->find_contact_id_by_email( $submission['contact']['email'] );
+
+				/**
+				 * Filter the URL the visitor is sent to after submitting. Defaults to the
+				 * form's "redirect to URL" setting in ActiveCampaign; return '' to show
+				 * the inline thanks message instead.
+				 *
+				 * @param string $redirect URL from ActiveCampaign, or '' if the form shows a message.
+				 * @param int    $form_id  ActiveCampaign form ID.
+				 */
+				$redirect = (string) apply_filters( 'bac_form_redirect', $posted['redirect'] ?? '', $form_id );
 			} else {
 				// 2. Fallback: API v3, so the lead isn't lost. Form automations won't fire.
 				self::log( 'proc.php submission failed for form ' . $form_id . ' (' . $posted['error'] . '); falling back to API — "Submits a form" automations will not run for this contact.' );
@@ -129,7 +141,8 @@ class BAC_Submit {
 
 			wp_send_json_success(
 				array(
-					'message' => wp_kses_post( wpautop( $form['thanks'] ?: __( 'Thanks — we\'ll be in touch soon.', 'bonsai-active-campaign' ) ) ),
+					'message'  => wp_kses_post( wpautop( $form['thanks'] ?: __( 'Thanks — we\'ll be in touch soon.', 'bonsai-active-campaign' ) ) ),
+					'redirect' => $redirect ? esc_url_raw( $redirect, array( 'http', 'https' ) ) : '',
 				)
 			);
 

@@ -21,7 +21,10 @@ and iframe are never loaded.
    pages use. ActiveCampaign records it as a real form submission, so
    automations that start on **"Submits a form"** fire, and the form's own
    actions (tags, lists, double opt-in) apply. On success the form is
-   replaced by the ActiveCampaign thank-you message.
+   replaced by the ActiveCampaign thank-you message. If the form is set to
+   **redirect to URL** in ActiveCampaign, the visitor is then sent to that
+   URL, as on an AC landing page. Change or turn off the redirect with the
+   `bac_form_redirect` filter (return `''` to stay on the page).
    - `proc.php` needs per-form hidden values (`u`, `or`) that the API doesn't
      return. They're read from the form's public embed script
      (`/f/embed.php?id={id}`) and cached for 12 hours. The account host comes

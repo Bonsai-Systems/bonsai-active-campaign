@@ -4,7 +4,8 @@
  * Each rendered form posts to admin-ajax.php (action: bac_submit_form). The
  * plugin submits it server-side to ActiveCampaign's own form endpoint
  * (proc.php), falling back to the API v3 if that fails. See class-bac-form-post.php.
- * On success the form is replaced by the ActiveCampaign "thanks" copy.
+ * On success the form is replaced by the ActiveCampaign "thanks" copy, then the
+ * visitor is redirected if the form is set to "redirect to URL" in ActiveCampaign.
  */
 (function ($) {
 	'use strict';
@@ -37,6 +38,11 @@
 				$thanks.html(response.data.message).removeAttr('hidden');
 				$form.attr('hidden', true);
 				$box.get(0).scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+				// Form is set to "redirect to URL" in ActiveCampaign — follow it, as AC's own embed does.
+				if (response.data.redirect) {
+					window.location.assign(response.data.redirect);
+				}
 			} else {
 				showError(response && response.data && response.data.message);
 			}

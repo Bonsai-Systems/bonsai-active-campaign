@@ -187,7 +187,8 @@ class BAC_Form_Post {
 	 *
 	 * @param int   $form_id ActiveCampaign form ID.
 	 * @param array $fields  proc.php field payload (email, firstname, field => [ id => value ], …).
-	 * @return array array( 'success' => bool, 'error' => string|null )
+	 * @return array array( 'success' => bool, 'error' => string|null, 'redirect' => string (success only; the
+	 *               form's "redirect to URL" setting, empty when the form shows a message instead) )
 	 */
 	public static function submit( $form_id, array $fields ) {
 		$params = self::get_params( $form_id );
@@ -239,9 +240,19 @@ class BAC_Form_Post {
 			$js = $json['js'];
 		}
 
-		// The JS calls _show_thank_you(...) on success or _show_error(...) on failure.
-		if ( $status >= 200 && $status < 300 && false !== strpos( $js, '_show_thank_you' ) ) {
-			return array( 'success' => true, 'error' => null );
+		// Forms set to "redirect to URL" on submit answer with window.top.location.href = "…".
+		$redirect = '';
+		if ( preg_match( '#location(?:\.href)?\s*=\s*([\'"])(.*?)\1#s', $js, $r ) ) {
+			$redirect = esc_url_raw( stripslashes( $r[2] ), array( 'http', 'https' ) );
+		}
+
+		// Success is _show_thank_you(...) (show a message) or a redirect; failure is _show_error(...).
+		if (
+			$status >= 200 && $status < 300
+			&& false === strpos( $js, '_show_error' )
+			&& ( false !== strpos( $js, '_show_thank_you' ) || $redirect )
+		) {
+			return array( 'success' => true, 'error' => null, 'redirect' => $redirect );
 		}
 
 		// Cached u/or may be stale if the form was edited; drop the cache so the next try re-reads them.

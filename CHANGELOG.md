@@ -6,6 +6,12 @@ to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+- [includes/class-bac-form-post.php] Successful submissions on forms set to **redirect to URL** were treated as failures and also went through the API fallback. For these forms `proc.php` answers with `window.top.location.href = "…"` instead of `_show_thank_you(...)`. A redirect now counts as success, as long as there's no `_show_error`.
+
+### Added
+- [includes/class-bac-submit.php, assets/js/bac-form.js] Visitors are sent to the form's "redirect to URL" after submitting, as on an AC landing page. The inline thanks message shows first while the next page loads. The URL is limited to http/https. New `bac_form_redirect` filter to change it, or return `''` to stay on the page.
+
 ## [1.2.1] - 2026-10-01
 
 ### Fixed
